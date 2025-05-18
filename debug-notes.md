@@ -54,7 +54,7 @@ docker build -t boomboombakudan-binance-producer:latest ./BinanceProducer
 ### Delete and recreate producer container
 ```bash
 docker stop binance-producer && docker rm binance-producer
-docker run -d --name binance-producer --network boomboombakudan_default -e REDPANDA_BROKERS="binance-redpanda:29092" -e ASSET_PRICES_TOPIC="data.asset_prices" boomboombakudan-binance-producer:latest
+docker run -d --name binance-producer --network boomboombakudan_binance-network -e REDPANDA_BROKERS="binance-redpanda:29092" -e ASSET_PRICES_TOPIC="data.asset_prices" boomboombakudan-binance-producer:latest
 ```
 
 ### Check WebSocket connections
@@ -82,7 +82,7 @@ docker build -t boomboombakudan-binance-consumer:latest ./BinanceConsumer
 ### Delete and recreate consumer
 ```bash
 docker stop binance-consumer && docker rm binance-consumer
-docker run -d --name binance-consumer --network boomboombakudan_default -e SPARK_MASTER="local[*]" -e REDPANDA_BROKERS="binance-redpanda:29092" -e ASSET_PRICES_TOPIC="data.asset_prices" -e ASSET_SCHEMA_LOCATION="/src/schemas/assets.avsc" -e ASSET_CASSANDRA_HOST="binance-cassandra" -e ASSET_CASSANDRA_PORT=9042 -e ASSET_CASSANDRA_USERNAME="adminadmin" -e ASSET_CASSANDRA_PASSWORD="adminadmin" -e ASSET_CASSANDRA_KEYSPACE="assets" -e ASSET_CASSANDRA_TABLE="assets" -p 9090:8080 -p 7014:7077 -p 4010:4040 boomboombakudan-binance-consumer:latest
+docker run -d --name binance-consumer --network boomboombakudan_binance-network -e SPARK_MASTER="local[*]" -e REDPANDA_BROKERS="binance-redpanda:29092" -e ASSET_PRICES_TOPIC="data.asset_prices" -e ASSET_SCHEMA_LOCATION="/src/schemas/assets.avsc" -e ASSET_CASSANDRA_HOST="binance-cassandra" -e ASSET_CASSANDRA_PORT=9042 -e ASSET_CASSANDRA_USERNAME="adminadmin" -e ASSET_CASSANDRA_PASSWORD="adminadmin" -e ASSET_CASSANDRA_KEYSPACE="assets" -e ASSET_CASSANDRA_TABLE="assets" -p 9090:8080 -p 7014:7077 -p 4010:4040 boomboombakudan-binance-consumer:latest
 ```
 
 ### Check Spark checkpoints
@@ -147,11 +147,38 @@ After changing Avro schemas or database schemas, you typically need to:
 3. Create new containers
 
 ### 5. Complete system restart
-If you need to start fresh:
+If you need to start fresh (wiping all database data):
 ```bash
-docker-compose down
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 ```
+
+### 6. Grafana Connection Issues
+The `hadesarchitect-cassandra-datasource` plugin (v3.1.0) has a parsing bug.
+- **Problem**: "Failed to resolve host" or plugin not found.
+- **Solution**: 
+  - Ensure `GF_INSTALL_PLUGINS=hadesarchitect-cassandra-datasource` is set.
+  - In `cassandra.yaml` provision file, the connection string MUST be at the root level `url: binance-cassandra:9042` rather than inside `jsonData`.
+  - Use static `uid: Cassandra` to match dashboard JSON.
+
+### 7. "Data is missing a time field" in Grafana
+- **Problem**: Grafana cannot plot time-series if the column is `text`.
+- **Solution**: Refactor the pipeline to use native `TIMESTAMP` types.
+  - Update `init-cassandra.sh` schema.
+  - Update Spark consumer to use `TimestampType`.
+  - Rebuild and wipe data (`docker compose down -v`).
+
+### 8. Cassandra OOM / Container Killed
+- **Problem**: Cassandra crashes with exit code 137 when memory limits (e.g., 2G) are applied.
+- **Solution**: Limit the JVM heap size via environment variables:
+  - `MAX_HEAP_SIZE: 1G`
+  - `HEAP_NEWSIZE: 256M`
+
+### 9. Grafana Public Dashboard 404
+- **Problem**: Browser console shows 404 for `public-dashboards` endpoint.
+- **Solution**: 
+  - Enable with `GF_PUBLIC_DASHBOARDS_ENABLED: true`.
+  - Generate the public dashboard config via the Grafana API if persistent logs are annoying.
 
 ## Testing Data Flow
 This sequence verifies data is flowing through the entire pipeline:

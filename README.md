@@ -52,14 +52,16 @@ The system uses:
    cd BoomboomBakudan
    ```
 
-2. Start the services using Docker Compose:
+2. Create a `.env` file based on the provided configuration variables.
+
+3. Start the services using Docker Compose:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
-3. Verify all services are running:
+4. Verify all services are running:
    ```bash
-   docker-compose ps
+   docker compose ps
    ```
 
 ## Usage
@@ -118,15 +120,17 @@ This schema allows for comprehensive analysis of price movements, volatility, an
 
 ### Environment Variables
 
-The system uses the following environment variables (already configured in docker-compose.yaml):
+The system uses a `.env` file for configuration. Ensure the following variables are defined:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | REDPANDA_BROKERS | Redpanda broker addresses | binance-redpanda:29092 |
 | ASSET_PRICES_TOPIC | Kafka topic for asset prices | data.asset_prices |
-| SPARK_MASTER | Spark master URL | local[*] |
+| SPARK_MASTER_URL | Spark master URL | spark://binance-consumer:7077 |
 | ASSET_CASSANDRA_HOST | Cassandra host | binance-cassandra |
 | ASSET_CASSANDRA_PORT | Cassandra port | 9042 |
+| ASSET_CASSANDRA_USERNAME | Cassandra username | adminadmin |
+| ASSET_CASSANDRA_PASSWORD | Cassandra password | adminadmin |
 | ASSET_CASSANDRA_KEYSPACE | Cassandra keyspace | assets |
 | ASSET_CASSANDRA_TABLE | Cassandra table | assets |
 
