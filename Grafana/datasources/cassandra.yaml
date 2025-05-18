@@ -2,16 +2,18 @@ apiVersion: 1
 
 datasources:
   - name: Cassandra
+    uid: Cassandra
     type: hadesarchitect-cassandra-datasource
     access: proxy
     orgId: 1
     isDefault: true
-    version: 1
+    version: 2
     editable: true
+    url: binance-cassandra:9042
     jsonData:
       keyspace: assets
       username: adminadmin
       port: 9042
-      host: binance-cassandra
+      consistency: 'ONE'
     secureJsonData:
-      password: adminadmin 
+      password: adminadmin
