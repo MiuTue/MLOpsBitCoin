@@ -92,7 +92,7 @@ class BinanceConsumer:
                 func.to_timestamp(func.col('decoded_data.timestamp')).alias('timestamp'),
                 func.to_timestamp(func.col('decoded_data.close_time')).alias('close_time'),
                 func.to_timestamp(func.col('decoded_data.collected_at')).alias('collected_at'),
-                func.date_format(func.current_timestamp(), "yyyy-MM-dd HH:mm:ss").alias('consumed_at')
+                func.current_timestamp().alias('consumed_at')
             )
         
         print("Created streaming DataFrame with schema")

@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS assets (
   quote_volume FLOAT,
   trades INT,
   is_closed BOOLEAN,
-  timestamp TEXT,
-  close_time TEXT,
-  collected_at TEXT,
-  consumed_at TEXT
+  timestamp TIMESTAMP,
+  close_time TIMESTAMP,
+  collected_at TIMESTAMP,
+  consumed_at TIMESTAMP
 );
 "
 
