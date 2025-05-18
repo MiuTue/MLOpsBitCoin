@@ -85,7 +85,7 @@ self.asset_map = {
     'BTCUSDT': 'bitcoin',
     'ETHUSDT': 'ethereum',
     'BNBUSDT': 'binance-coin',
-    'NEWPAIRUSDT': 'new-coin-name'  # Add your new pair here
+    'NEWPAIRUSDT': 'new-coin-name'  
 }
 ```
 

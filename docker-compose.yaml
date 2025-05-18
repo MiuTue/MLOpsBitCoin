@@ -32,8 +32,10 @@ services:
       - 9644:9644
       - 28082:28082
       - 29092:29092
+    networks:
+      - binance-network
     healthcheck:
-      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      test: [ "CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1" ]
       interval: 15s
       timeout: 3s
       retries: 5
@@ -44,23 +46,15 @@ services:
     image: docker.redpanda.com/redpandadata/console:v2.4.6
     container_name: binance-redpanda-console
     entrypoint: /bin/sh
-    command: -c "echo \"$$CONSOLE_CONFIG_FILE\" > /tmp/config.yml; /app/console"
+    command: -c "/app/console"
     environment:
-      CONFIG_FILEPATH: /tmp/config.yml
-      CONSOLE_CONFIG_FILE: |
-        kafka:
-          brokers: ["binance-redpanda:29092"]
-          schemaRegistry:
-            enabled: true
-            urls: ["http://binance-redpanda:8081"]
-        redpanda:
-          adminApi:
-            enabled: true
-            urls: ["http://binance-redpanda:9644"]
-        connect:
-          enabled: false
+      CONFIG_FILEPATH: /etc/console-config.yaml
+    volumes:
+      - ./console-config.yaml:/etc/console-config.yaml
     ports:
       - 1003:8080
+    networks:
+      - binance-network
     depends_on:
       binance-redpanda:
         condition: service_healthy
@@ -72,8 +66,10 @@ services:
       dockerfile: Dockerfile
     container_name: binance-producer
     environment:
-      REDPANDA_BROKERS: "binance-redpanda:29092"
-      ASSET_PRICES_TOPIC: "data.asset_prices"
+      REDPANDA_BROKERS: ${REDPANDA_BROKERS}
+      ASSET_PRICES_TOPIC: ${ASSET_PRICES_TOPIC}
+    networks:
+      - binance-network
     depends_on:
       binance-redpanda:
         condition: service_healthy
@@ -90,15 +86,21 @@ services:
       - 4010:4040
     environment:
       SPARK_MASTER: "local[*]"
-      REDPANDA_BROKERS: "binance-redpanda:29092"
-      ASSET_PRICES_TOPIC: "data.asset_prices"
-      ASSET_SCHEMA_LOCATION: "/src/schemas/assets.avsc"
-      ASSET_CASSANDRA_HOST: "binance-cassandra"
-      ASSET_CASSANDRA_PORT: 9042
-      ASSET_CASSANDRA_USERNAME: "adminadmin"
-      ASSET_CASSANDRA_PASSWORD: "adminadmin"
-      ASSET_CASSANDRA_KEYSPACE: 'assets'
-      ASSET_CASSANDRA_TABLE: 'assets'
+      REDPANDA_BROKERS: ${REDPANDA_BROKERS}
+      ASSET_PRICES_TOPIC: ${ASSET_PRICES_TOPIC}
+      ASSET_SCHEMA_LOCATION: ${ASSET_SCHEMA_LOCATION:-/src/schemas/assets.avsc}
+      ASSET_CASSANDRA_HOST: ${ASSET_CASSANDRA_HOST}
+      ASSET_CASSANDRA_PORT: ${ASSET_CASSANDRA_PORT}
+      ASSET_CASSANDRA_USERNAME: ${ASSET_CASSANDRA_USERNAME}
+      ASSET_CASSANDRA_PASSWORD: ${ASSET_CASSANDRA_PASSWORD}
+      ASSET_CASSANDRA_KEYSPACE: ${ASSET_CASSANDRA_KEYSPACE}
+      ASSET_CASSANDRA_TABLE: ${ASSET_CASSANDRA_TABLE}
+    networks:
+      - binance-network
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     depends_on:
       binance-redpanda:
         condition: service_healthy
@@ -114,13 +116,19 @@ services:
     container_name: binance-consumer-worker-1
     ports:
       - 8041:8081
+    networks:
+      - binance-network
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     depends_on:
       - binance-consumer
     environment:
       SPARK_MODE: worker
       SPARK_WORKER_CORES: 2
       SPARK_WORKER_MEMORY: 1g
-      SPARK_MASTER_URL: spark://binance-consumer:7077
+      SPARK_MASTER_URL: ${SPARK_MASTER_URL}
 
   binance-consumer-worker-2:
     build:
@@ -129,13 +137,19 @@ services:
     container_name: binance-consumer-worker-2
     ports:
       - 8042:8081
+    networks:
+      - binance-network
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     depends_on:
       - binance-consumer
     environment:
       SPARK_MODE: worker
       SPARK_WORKER_CORES: 2
       SPARK_WORKER_MEMORY: 1g
-      SPARK_MASTER_URL: spark://binance-consumer:7077
+      SPARK_MASTER_URL: ${SPARK_MASTER_URL}
 
   # Cassandra service
   binance-cassandra:
@@ -143,8 +157,17 @@ services:
     container_name: binance-cassandra
     ports:
       - 9042:9042
+    environment:
+      - MAX_HEAP_SIZE=1G
+      - HEAP_NEWSIZE=256M
+    networks:
+      - binance-network
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     healthcheck:
-      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+      test: [ "CMD-SHELL", "[ $$(nodetool statusgossip) = running ]" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -156,24 +179,35 @@ services:
     depends_on:
       binance-cassandra:
         condition: service_healthy
+    networks:
+      - binance-network
     volumes:
       - ./init-cassandra.sh:/init-cassandra.sh
-    command: ["/init-cassandra.sh"]
+    command: [ "/init-cassandra.sh" ]
 
   binance-grafana:
     image: grafana/grafana-enterprise
     container_name: binance-grafana
+    restart: unless-stopped
     depends_on:
       binance-cassandra:
         condition: service_healthy
+    networks:
+      - binance-network
     ports:
       - 3000:3000
+    environment:
+      - GF_INSTALL_PLUGINS=hadesarchitect-cassandra-datasource
+      - GF_PUBLIC_DASHBOARDS_ENABLED=true
     volumes:
       - grafana-data:/var/lib/grafana
-      - grafana-log:/var/log/grafana
-      - grafana-config:/etc/grafana
+      - ./Grafana/datasources/cassandra.yaml:/etc/grafana/provisioning/datasources/cassandra.yaml
+      - ./Grafana/dashboard_provider.yaml:/etc/grafana/provisioning/dashboards/provider.yaml
+      - ./Grafana/dashboards:/var/lib/grafana/dashboards
 
 volumes:
   grafana-data: {}
-  grafana-log: {}
-  grafana-config: {} 
+
+networks:
+  binance-network:
+    driver: bridge

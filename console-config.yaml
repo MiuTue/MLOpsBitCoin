@@ -1,0 +1,11 @@
+kafka:
+  brokers: ["binance-redpanda:29092"]
+  schemaRegistry:
+    enabled: true
+    urls: ["http://binance-redpanda:8081"]
+redpanda:
+  adminApi:
+    enabled: true
+    urls: ["http://binance-redpanda:9644"]
+connect:
+  enabled: false
