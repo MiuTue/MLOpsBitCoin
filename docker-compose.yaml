@@ -205,8 +205,66 @@ services:
       - ./Grafana/dashboard_provider.yaml:/etc/grafana/provisioning/dashboards/provider.yaml
       - ./Grafana/dashboards:/var/lib/grafana/dashboards
 
+  # MLflow Tracking Server
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.11.1
+    container_name: binance-mlflow
+    ports:
+      - 5000:5000
+    networks:
+      - binance-network
+    command: >
+      mlflow server 
+      --backend-store-uri sqlite:///mlflow.db 
+      --default-artifact-root /mlflow-artifacts 
+      --host 0.0.0.0
+    volumes:
+      - mlflow-data:/mlflow-artifacts
+
+  # LSTM Training Service (Runs once or on schedule)
+  binance-trainer:
+    build:
+      context: ./BinanceConsumer
+      dockerfile: Dockerfile
+    container_name: binance-trainer
+    entrypoint: ["python", "/src/models/train_lstm.py"]
+    environment:
+      REDPANDA_BROKERS: ${REDPANDA_BROKERS}
+      ASSET_CASSANDRA_HOST: ${ASSET_CASSANDRA_HOST}
+      ASSET_CASSANDRA_PORT: ${ASSET_CASSANDRA_PORT}
+      ASSET_CASSANDRA_KEYSPACE: ${ASSET_CASSANDRA_KEYSPACE}
+      ASSET_CASSANDRA_TABLE: ${ASSET_CASSANDRA_TABLE}
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    networks:
+      - binance-network
+    volumes:
+      - ./models:/src/models
+    depends_on:
+      - mlflow
+      - binance-cassandra
+
+  # Serving API (FastAPI)
+  binance-serving:
+    image: python:3.10-slim
+    container_name: binance-serving
+    working_dir: /app
+    ports:
+      - 8000:8000
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    networks:
+      - binance-network
+    volumes:
+      - ./Serving:/app
+      - ./BinanceConsumer/requirements.txt:/app/requirements.txt
+    command: >
+      sh -c "pip install -r requirements.txt fastapi uvicorn && python app.py"
+    depends_on:
+      - mlflow
+
 volumes:
   grafana-data: {}
+  mlflow-data: {}
 
 networks:
   binance-network:

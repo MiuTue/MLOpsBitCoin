@@ -1,157 +1,100 @@
-Real-Time Crypto Data Stream
+# BoomboomBakudan: Real-Time Crypto MLOps Pipeline
 
-A robust data streaming pipeline that captures real-time cryptocurrency price data from Binance, processes it through a scalable stream processing architecture, and makes it available for analysis and visualization.
+A robust, real-time cryptocurrency price prediction pipeline. This project captures live data from Binance, processes it through a scalable architecture, and uses an LSTM model to predict future prices, all managed within an MLOps framework.
 
-## Features
+## 🚀 Key Features
 
-- **Real-time Data Collection**: Live streaming of cryptocurrency price data from Binance WebSocket API
-- **Scalable Stream Processing**: Apache Spark-based stream processing with worker nodes
-- **Avro Schema Serialization**: Structured data serialization using Apache Avro
-- **Message Queueing**: Redpanda (Kafka API compatible) message broker for reliable data streaming
-- **Persistent Storage**: Cassandra NoSQL database for storing processed data
-- **Real-time Visualization**: Grafana dashboards for monitoring cryptocurrency prices
-- **Containerized Architecture**: Docker-based deployment for easy setup and scaling
-- **Fault Tolerance**: Resilient system design with automatic reconnection and error handling
+- **Real-time Data Ingestion**: Captures live OHLCV data from Binance WebSocket.
+- **Scalable Stream Processing**: Apache Spark handles stream processing and real-time inference.
+- **MLOps Lifecycle**: 
+    - **Experiment Tracking**: MLflow for logging parameters, metrics, and models.
+    - **Automated Training**: LSTM model training pulling historical data from Cassandra.
+    - **Scalable Serving**: FastAPI-based microservice for model inference.
+- **High-Performance Storage**: Cassandra NoSQL database for time-series crypto data.
+- **Visualization**: Grafana dashboards for monitoring prices and model performance.
+- **Fully Containerized**: Deploy the entire stack using Docker Compose.
 
-## Architecture Overview
+## 🏗️ Architecture
 
 ```
-┌─────────────────┐    ┌────────────┐    ┌─────────────────┐    ┌─────────────┐
-│  Binance        │    │            │    │ Spark Streaming │    │             │
-│  WebSocket API  │───▶│  Redpanda  │───▶│ (Consumer with  │───▶│  Cassandra  │
-│  (Producer)     │    │  (Kafka)   │    │  workers)       │    │  Database   │
-└─────────────────┘    └────────────┘    └─────────────────┘    └──────┬──────┘
-                                                                       │
-                                                                       ▼
-                                                               ┌─────────────────┐
-                                                               │    Grafana      │
-                                                               │  Visualization  │
-                                                               └─────────────────┘
+┌──────────────┐    ┌────────────┐    ┌─────────────────┐    ┌─────────────┐
+│  Binance     │    │            │    │ Spark Streaming │    │             │
+│  WebSocket   │───▶│  Redpanda  │───▶│ (Inference via  │───▶│  Cassandra  │
+│  (Producer)  │    │  (Kafka)   │    │  FastAPI)       │    │  Database   │
+└──────────────┘    └────────────┘    └────────┬────────┘    └──────┬──────┘
+                                               │                    │
+                                     ┌─────────┴─────────┐          ▼
+                                     │  MLflow & Trainer │    ┌─────────────┐
+                                     │ (LSTM Management) │    │   Grafana   │
+                                     └───────────────────┘    └─────────────┘
 ```
 
-The system uses:
-- **Python** for data collection and processing
-- **Apache Spark** for stream processing
-- **Redpanda** (Kafka API compatible) for message queuing
-- **Apache Avro** for data serialization
-- **Cassandra** for data storage
-- **Grafana** for visualization
+## 🛠️ Stack
 
-## Installation
+- **Languages**: Python, PySpark
+- **Big Data**: Apache Spark, Redpanda (Kafka)
+- **Database**: Apache Cassandra
+- **ML/MLOps**: TensorFlow (LSTM), MLflow, FastAPI
+- **Ops**: Docker, Docker Compose
+- **Visuals**: Grafana
+
+## 📋 Installation
 
 ### Prerequisites
 
-- Docker and Docker Compose
+- Docker & Docker Compose
 - Git
 
 ### Setup
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/BoomboomBakudan.git
-   cd BoomboomBakudan
-   ```
+1.  **Clone & Navigate**:
+    ```bash
+    git clone https://github.com/yourusername/BoomboomBakudan.git
+    cd BoomboomBakudan
+    ```
 
-2. Create a `.env` file based on the provided configuration variables.
+2.  **Configure Environment**:
+    ```bash
+    cp .env.example .env
+    # Edit .env if you need custom credentials
+    ```
 
-3. Start the services using Docker Compose:
-   ```bash
-   docker compose up -d
-   ```
+3.  **Launch the Factory**:
+    ```bash
+    docker-compose up -d
+    ```
 
-4. Verify all services are running:
-   ```bash
-   docker compose ps
-   ```
+## 📈 MLOps Workflow
 
-## Usage
-
-### Accessing Services
-
-- **Redpanda Console**: http://localhost:1003 - For monitoring Kafka topics and messages
-- **Grafana**: http://localhost:3000 - For data visualization (default credentials: admin/admin)
-- **Spark UI**: http://localhost:4010 - For monitoring Spark jobs and performance
-
-### Monitoring Data Flow
-
-1. Check the Redpanda Console to verify messages are flowing through the `data.asset_prices` topic.
-2. View live data processing in the Spark UI.
-3. Monitor cryptocurrency prices and trends in Grafana dashboards.
-
-### Adding New Cryptocurrency Pairs
-
-To monitor additional cryptocurrency pairs, update the `asset_map` in `BinanceProducer/BinanceProducer.py`:
-
-```python
-self.asset_map = {
-    'BTCUSDT': 'bitcoin',
-    'ETHUSDT': 'ethereum',
-    'BNBUSDT': 'binance-coin',
-    'NEWPAIRUSDT': 'new-coin-name'  
-}
-```
-
-And update the WebSocket connection URL to include the new pair.
-
-## Data Schema
-
-The system captures comprehensive OHLCV (Open-High-Low-Close-Volume) data from Binance:
-
-| Field | Description | Type |
-|-------|-------------|------|
-| id | Unique identifier | UUID |
-| asset_name | Cryptocurrency name | String |
-| open | Opening price in the period | Float |
-| high | Highest price in the period | Float |
-| low | Lowest price in the period | Float |
-| close | Closing price in the period | Float |
-| volume | Trading volume in base asset | Float |
-| quote_volume | Trading volume in quote asset | Float |
-| trades | Number of trades in the period | Integer |
-| is_closed | Whether the candlestick is closed | Boolean |
-| timestamp | Start time of the period | Timestamp |
-| close_time | End time of the period | Timestamp |
-| collected_at | Time when data was collected | Timestamp |
-| consumed_at | Time when data was processed | Timestamp |
-
-This schema allows for comprehensive analysis of price movements, volatility, and trading activity.
-
-## Configuration
-
-### Environment Variables
-
-The system uses a `.env` file for configuration. Ensure the following variables are defined:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| REDPANDA_BROKERS | Redpanda broker addresses | binance-redpanda:29092 |
-| ASSET_PRICES_TOPIC | Kafka topic for asset prices | data.asset_prices |
-| SPARK_MASTER_URL | Spark master URL | spark://binance-consumer:7077 |
-| ASSET_CASSANDRA_HOST | Cassandra host | binance-cassandra |
-| ASSET_CASSANDRA_PORT | Cassandra port | 9042 |
-| ASSET_CASSANDRA_USERNAME | Cassandra username | adminadmin |
-| ASSET_CASSANDRA_PASSWORD | Cassandra password | adminadmin |
-| ASSET_CASSANDRA_KEYSPACE | Cassandra keyspace | assets |
-| ASSET_CASSANDRA_TABLE | Cassandra table | assets |
-
-### Scaling
-
-To scale the Spark workers:
+### 1. Training the Model
+Use the trainer service to train the LSTM model on historical data stored in Cassandra:
 ```bash
-docker-compose up -d --scale binance-consumer-worker=3
+docker-compose run binance-trainer
 ```
 
-## Contributing
+### 2. Experiment Tracking
+Access the **MLflow UI** at [http://localhost:5000](http://localhost:5000) to:
+- Compare training runs.
+- View metrics (MAE, RMSE, MAPE, Hit Rate).
+- Download or register model versions.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### 3. Real-Time Inference
+The `binance-consumer` service automatically calls the `binance-serving` API (FastAPI) at port `8000` to get real-time price predictions while processing the stream.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## 📊 Monitoring
 
-## License
+- **Redpanda Console**: [http://localhost:1003](http://localhost:1003) - Monitor data topics.
+- **Grafana**: [http://localhost:3000](http://localhost:3000) - View live price and prediction charts.
+- **Spark UI**: [http://localhost:4010](http://localhost:4010) - Monitor processing performance.
 
-[MIT License](LICENSE)
+## 📝 Configuration (Environment Variables)
 
+| Variable | Description |
+|----------|-------------|
+| `MLFLOW_TRACKING_URI` | URI for the MLflow server |
+| `REDPANDA_BROKERS` | Address of Redpanda brokers |
+| `ASSET_CASSANDRA_HOST` | Hostname for Cassandra |
+| `ASSET_PRICES_TOPIC` | Topic name for streaming data |
+
+---
+*Created with ❤️ by the BoomboomBakudan Team.*

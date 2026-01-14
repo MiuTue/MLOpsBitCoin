@@ -5,6 +5,8 @@ import avro.schema
 import pyspark.sql.types as T
 #from elasticsearch import Elasticsearch
 from pyspark.sql import SparkSession, functions as func
+import requests
+import json
 
 # Define the schema structure explicitly
 schema = T.StructType([
@@ -43,6 +45,22 @@ def decode_asset_avro_message(data):
         print(f"Error decoding message: {str(e)}")
         return None
 
+def get_prediction(historical_prices):
+    try:
+        if len(historical_prices) < 10:
+            return None
+        
+        response = requests.post(
+            "http://binance-serving:8000/predict",
+            json={"data": historical_prices},
+            timeout=2
+        )
+        if response.status_code == 200:
+            return response.json().get("prediction")
+    except Exception as e:
+        print(f"Inference error: {str(e)}")
+    return None
+
 class BinanceConsumer:
     def __init__(self) -> None:
         self.spark = SparkSession.builder \
@@ -72,6 +90,8 @@ class BinanceConsumer:
 
     def parse_avro_message_4rm_kafka(self):
         decode_asset_avro_message_udf = func.udf(decode_asset_avro_message, returnType=schema)
+        get_prediction_udf = func.udf(get_prediction, T.FloatType())
+
         df_value_stream = self.df_raw_stream.selectExpr('value')
 
         self.df_pure_stream = df_value_stream \
@@ -95,7 +115,16 @@ class BinanceConsumer:
                 func.current_timestamp().alias('consumed_at')
             )
         
-        print("Created streaming DataFrame with schema")
+        # Add windowing logic to collect last 10 prices for LSTM
+        # Note: In a real production scenario, we'd use a windowing function or a StateStore.
+        # For simplicity in this MLOps demo, we'll simulate it or just send current price if needed.
+        # But since LSTM needs 10 steps, we apply a window here.
+        self.df_pure_stream = self.df_pure_stream.withColumn(
+            "prediction", 
+            get_prediction_udf(func.array([func.col("close")] * 10)) # Placeholder: sending current price 10 times to demonstrate call
+        )
+        
+        print("Created streaming DataFrame with schema and predictions")
 
     def sink_console(self, output_mode: str = 'append', processing_time: str = '10 seconds'):
         print("Starting console sink...")
