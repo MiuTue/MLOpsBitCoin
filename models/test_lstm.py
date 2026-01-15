@@ -17,6 +17,13 @@ from train_lstm import LSTMTrainer
 class TestLSTMTrainer(unittest.TestCase):
 
     @patch('train_lstm.mlflow')
+    @patch.dict('os.environ', {
+        'ASSET_CASSANDRA_HOST': 'localhost',
+        'ASSET_CASSANDRA_PORT': '9042',
+        'ASSET_CASSANDRA_KEYSPACE': 'assets',
+        'ASSET_CASSANDRA_TABLE': 'assets',
+        'MLFLOW_TRACKING_URI': 'http://localhost:5000'
+    })
     def test_prepare_data(self, mock_mlflow):
         """Test that data preparation correctly shapes the input for LSTM"""
         # Mocking mlflow to avoid server connection attempts during init
