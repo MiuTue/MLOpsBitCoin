@@ -17,6 +17,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Step 2: Create .env file from Secrets
+      # Since .env is ignored by git, we need to recreate it on the runner
+      - name: Create .env file
+        run: echo "${{ secrets.ENV_FILE }}" > .env
+
       # Step 2: Run tests
       - name: Test
         run: |
