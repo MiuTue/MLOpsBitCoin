@@ -1,100 +1,117 @@
-# BoomboomBakudan: Real-Time Crypto MLOps Pipeline
+# BoomboomBakudan: MLOps Pipeline Dự Đoán Giá Bitcoin Real-Time
 
-A robust, real-time cryptocurrency price prediction pipeline. This project captures live data from Binance, processes it through a scalable architecture, and uses an LSTM model to predict future prices, all managed within an MLOps framework.
+Dự án xây dựng một pipeline MLOps hoàn chỉnh để dự đoán giá tiền điện tử (Bitcoin) theo thời gian thực. Hệ thống thu thập dữ liệu trực tiếp từ Binance, xử lý qua Kafka & Spark, lưu trữ tại Cassandra, và sử dụng mô hình LSTM để dự đoán giá tương lai.
 
-## 🚀 Key Features
+## 🚀 Tính Năng Chính
 
-- **Real-time Data Ingestion**: Captures live OHLCV data from Binance WebSocket.
-- **Scalable Stream Processing**: Apache Spark handles stream processing and real-time inference.
+- **Real-time Data**: Thu thập dữ liệu nến (OHLCV) từ Binance WebSocket.
+- **Microservices**: Kiến trúc container hóa toàn bộ với Docker Compose.
+- **Stream Processing**: Apache Spark xử lý dữ liệu streaming và gọi API dự đoán.
 - **MLOps Lifecycle**: 
-    - **Experiment Tracking**: MLflow for logging parameters, metrics, and models.
-    - **Automated Training**: LSTM model training pulling historical data from Cassandra.
-    - **Scalable Serving**: FastAPI-based microservice for model inference.
-- **High-Performance Storage**: Cassandra NoSQL database for time-series crypto data.
-- **Visualization**: Grafana dashboards for monitoring prices and model performance.
-- **Fully Containerized**: Deploy the entire stack using Docker Compose.
+    - **MLflow**: Quản lý thí nghiệm, log metrics, và versioning mô hình.
+    - **CI/CD**: Tự động test và deploy với GitHub Actions (Self-hosted Runner).
+    - **Retraining**: Pipeline huấn luyện lạị mô hình khi có dữ liệu mới.
+- **Monitoring**: Dashboard Grafana theo dõi giá và hiệu suất mô hình.
 
-## 🏗️ Architecture
+## 🏗️ Kiến Trúc
 
 ```
 ┌──────────────┐    ┌────────────┐    ┌─────────────────┐    ┌─────────────┐
 │  Binance     │    │            │    │ Spark Streaming │    │             │
-│  WebSocket   │───▶│  Redpanda  │───▶│ (Inference via  │───▶│  Cassandra  │
-│  (Producer)  │    │  (Kafka)   │    │  FastAPI)       │    │  Database   │
+│  WebSocket   │───▶│  Redpanda  │───▶│ (Consumer &     │───▶│  Cassandra  │
+│  (Producer)  │    │  (Kafka)   │    │  Inference)     │    │  (Database) │
 └──────────────┘    └────────────┘    └────────┬────────┘    └──────┬──────┘
                                                │                    │
                                      ┌─────────┴─────────┐          ▼
-                                     │  MLflow & Trainer │    ┌─────────────┐
-                                     │ (LSTM Management) │    │   Grafana   │
-                                     └───────────────────┘    └─────────────┘
+                                     │  Serving API      │    ┌─────────────┐
+                                     │  (FastAPI)        │    │   Grafana   │
+                                     └─────────▲─────────┘    └─────────────┘
+                                               │
+                                     ┌─────────┴─────────┐
+                                     │  MLflow & Trainer │
+                                     │  (LSTM Model)     │
+                                     └───────────────────┘
 ```
 
-## 🛠️ Stack
+## �️ Cài Đặt & Chạy Dự Án
 
-- **Languages**: Python, PySpark
-- **Big Data**: Apache Spark, Redpanda (Kafka)
-- **Database**: Apache Cassandra
-- **ML/MLOps**: TensorFlow (LSTM), MLflow, FastAPI
-- **Ops**: Docker, Docker Compose
-- **Visuals**: Grafana
-
-## 📋 Installation
-
-### Prerequisites
-
+### 1. Yêu Cầu
 - Docker & Docker Compose
 - Git
 
-### Setup
+### 2. Cấu Hình Biến Môi Trường (.env)
+Dự án đã có file `.env` chuẩn. Nội dung đầy đủ như sau (lưu vào file `.env` tại thư mục gốc):
 
-1.  **Clone & Navigate**:
-    ```bash
-    git clone https://github.com/yourusername/BoomboomBakudan.git
-    cd BoomboomBakudan
-    ```
+```properties
+# --- Redpanda (Kafka) ---
+REDPANDA_BROKERS=binance-redpanda:29092
+ASSET_PRICES_TOPIC=data.asset_prices
 
-2.  **Configure Environment**:
-    ```bash
-    cp .env.example .env
-    # Edit .env if you need custom credentials
-    ```
+# --- Cassandra (Database) ---
+ASSET_CASSANDRA_HOST=binance-cassandra
+ASSET_CASSANDRA_PORT=9042
+ASSET_CASSANDRA_KEYSPACE=assets
+ASSET_CASSANDRA_TABLE=assets
+ASSET_CASSANDRA_USERNAME=adminadmin
+ASSET_CASSANDRA_PASSWORD=adminadmin
 
-3.  **Launch the Factory**:
-    ```bash
-    docker-compose up -d
-    ```
+# --- Spark ---
+SPARK_MASTER_URL=spark://binance-consumer:7077
+ASSET_SCHEMA_LOCATION=/src/schemas/assets.avsc
 
-## 📈 MLOps Workflow
-
-### 1. Training the Model
-Use the trainer service to train the LSTM model on historical data stored in Cassandra:
-```bash
-docker-compose run binance-trainer
+# --- MLOps ---
+MLFLOW_TRACKING_URI=http://mlflow:5000
 ```
 
-### 2. Experiment Tracking
-Access the **MLflow UI** at [http://localhost:5000](http://localhost:5000) to:
-- Compare training runs.
-- View metrics (MAE, RMSE, MAPE, Hit Rate).
-- Download or register model versions.
+### 3. Khởi Chạy
+Chạy lệnh sau để build và start toàn bộ hệ thống:
 
-### 3. Real-Time Inference
-The `binance-consumer` service automatically calls the `binance-serving` API (FastAPI) at port `8000` to get real-time price predictions while processing the stream.
+```bash
+docker-compose up -d --build
+```
 
-## 📊 Monitoring
+### 4. Kiểm Tra Các Dịch Vụ
+Sau khi khởi chạy thành công:
+- **Redpanda Console**: [http://localhost:1003](http://localhost:1003) (Xem dữ liệu streaming)
+- **Grafana**: [http://localhost:3000](http://localhost:3000) (User/Pass: `admin`/`admin`)
+- **Spark UI**: [http://localhost:4010](http://localhost:4010) (Xem job xử lý)
+- **MLflow UI**: [http://localhost:5000](http://localhost:5000) (Xem model training)
+- **Serving API**: [http://localhost:8000/docs](http://localhost:8000/docs) (Test API)
 
-- **Redpanda Console**: [http://localhost:1003](http://localhost:1003) - Monitor data topics.
-- **Grafana**: [http://localhost:3000](http://localhost:3000) - View live price and prediction charts.
-- **Spark UI**: [http://localhost:4010](http://localhost:4010) - Monitor processing performance.
+## 🧪 Cách Test Hệ Thống
 
-## 📝 Configuration (Environment Variables)
+### Test Serving API
+Mô hình yêu cầu input là 10 giá trị `close` price gần nhất.
 
-| Variable | Description |
-|----------|-------------|
-| `MLFLOW_TRACKING_URI` | URI for the MLflow server |
-| `REDPANDA_BROKERS` | Address of Redpanda brokers |
-| `ASSET_CASSANDRA_HOST` | Hostname for Cassandra |
-| `ASSET_PRICES_TOPIC` | Topic name for streaming data |
+**Cách 1: Dùng Curl**
+```bash
+curl -X POST "http://localhost:8000/predict" \
+     -H "Content-Type: application/json" \
+     -d '{"data": [42000, 42010, 42005, 42020, 42015, 42030, 42025, 42040, 42035, 42050]}'
+```
+
+**Cách 2: Dùng Python**
+```python
+import requests
+data = [42000, 42010, 42005, 42020, 42015, 42030, 42025, 42040, 42035, 42050]
+response = requests.post("http://localhost:8000/predict", json={"data": data})
+print(response.json())
+```
+
+### Test Automatic Training
+Để kích hoạt training thủ công (hoặc chờ CI/CD):
+```bash
+docker-compose run --rm binance-trainer
+```
+
+## 🔄 CI/CD (GitHub Actions)
+
+Dự án hỗ trợ **Self-Hosted Runner**.
+1. Đăng ký runner tại GitHub Repo > Settings > Actions > Runners.
+2. Chạy runner trên máy của bạn (hoặc VPS).
+3. Mỗi khi có commit mới vào `main`:
+   - Hệ thống tự động chạy Unit Test (`models/test_lstm.py`).
+   - Nếu pass, tự động chạy lệnh `docker-compose up -d --build` để cập nhật code mới nhất.
 
 ---
-*Created with ❤️ by the BoomboomBakudan Team.*
+*Created by BoomboomBakudan Team*

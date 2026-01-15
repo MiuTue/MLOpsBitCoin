@@ -1,0 +1,42 @@
+name: Deployment Pipeline
+
+# Trigger the workflow on push to the main branch
+on:
+  push:
+    branches:
+      - main
+      - master
+
+# Define the jobs to run
+jobs:
+  deploy:
+    runs-on: self-hosted  # This tells GitHub to use your local machine/server
+
+    steps:
+      # Step 1: Checkout the code from the repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Run tests
+      - name: Test
+        run: |
+          echo "Running tests..."
+          # Run pytest inside the binance-trainer container
+          # We override the entrypoint to install pytest and run the test file
+          docker-compose run --rm --entrypoint "sh -c" binance-trainer "pip install pytest && python -m pytest /src/models/test_lstm.py"
+
+      # Step 3: Build and Deploy the services using Docker Compose
+      # We assume Docker and Docker Compose are already installed on the runner machine
+      - name: Build and Deploy
+        run: |
+          echo "Starting deployment..."
+          docker-compose down # Optional: Stop existing containers first if needed for fresh start
+          docker-compose up -d --build --remove-orphans
+          echo "Deployment completed successfully!"
+
+      # Step 4: Cleanup unused images (Optional)
+      # This helps keep disk space usage in check on your self-hosted runner
+      - name: Prune Docker System
+        if: always()
+        run: |
+         docker system prune -f

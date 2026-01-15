@@ -111,7 +111,10 @@ class LSTMTrainer:
             mlflow.log_metric("mape", mape)
             mlflow.log_metric("hit_rate", hit_rate)
             
-            mlflow.tensorflow.log_model(model, "lstm_model")
+            from mlflow.models.signature import infer_signature
+            signature = infer_signature(X_train, model.predict(X_train))
+            
+            mlflow.tensorflow.log_model(model, "lstm_model", signature=signature)
             logger.info("Model and metrics logged to MLflow.")
 
 if __name__ == "__main__":

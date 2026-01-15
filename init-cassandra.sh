@@ -25,8 +25,12 @@ CREATE TABLE IF NOT EXISTS assets (
   timestamp TIMESTAMP,
   close_time TIMESTAMP,
   collected_at TIMESTAMP,
-  consumed_at TIMESTAMP
+  consumed_at TIMESTAMP,
+  prediction FLOAT
 );
+
+ALTER TABLE assets ADD prediction FLOAT;
+
 "
 
 echo "Creating admin user..."

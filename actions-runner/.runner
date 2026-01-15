@@ -1,0 +1,11 @@
+﻿{
+  "agentId": 2,
+  "agentName": "DESKTOP-9VLAR26",
+  "poolId": 1,
+  "poolName": "Default",
+  "serverUrl": "https://pipelinesghubeus3.actions.githubusercontent.com/jhenvnc8ACrz4CrPvCqn14Is3WvgADwWmPwTN5X5duwsrwgsza/",
+  "gitHubUrl": "https://github.com/MiuTue/MLOpsBitCoin",
+  "workFolder": "_work",
+  "useV2Flow": true,
+  "serverUrlV2": "https://broker.actions.githubusercontent.com/"
+}
