@@ -1,0 +1,12 @@
+﻿{
+  "repositoryName": "MiuTue/MLOpsBitCoin",
+  "pipelineDirectory": "MLOpsBitCoin",
+  "workspaceDirectory": "MLOpsBitCoin\\MLOpsBitCoin",
+  "repositories": {
+    "MiuTue/MLOpsBitCoin": {
+      "repositoryPath": "MLOpsBitCoin\\MLOpsBitCoin",
+      "lastRunOn": "01/15/2026 09:58:24 +07:00"
+    }
+  },
+  "lastRunOn": "01/15/2026 10:08:07 +07:00"
+}

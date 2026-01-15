@@ -18,9 +18,17 @@ jobs:
         uses: actions/checkout@v4
 
       # Step 2: Create .env file from Secrets
-      # Since .env is ignored by git, we need to recreate it on the runner
+      # We use Python to guarantee UTF-8 encoding without BOM, avoiding PowerShell/Shell variations
       - name: Create .env file
-        run: echo "${{ secrets.ENV_FILE }}" > .env
+        shell: bash
+        env:
+          ENV_CONTENT: ${{ secrets.ENV_FILE }}
+        run: |
+          if command -v python3 &>/dev/null; then
+              python3 -c "import os; open('.env', 'w', encoding='utf-8').write(os.environ['ENV_CONTENT'])"
+          else
+              python -c "import os; open('.env', 'w', encoding='utf-8').write(os.environ['ENV_CONTENT'])"
+          fi
 
       # Step 2: Run tests
       - name: Test
