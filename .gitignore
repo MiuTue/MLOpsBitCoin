@@ -78,3 +78,6 @@ Thumbs.db
 ivy/
 ivy.jar 
 .cursorignore
+
+# Local Runner
+actions-runner/
